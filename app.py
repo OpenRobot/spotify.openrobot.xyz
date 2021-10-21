@@ -105,38 +105,41 @@ class App(fastapi.FastAPI):
 
     async def renew(self): # Renews spotify token
         while True:
-            user_id, res = await self.get_user_near_expire()
+            user_near_expire = await self.get_user_near_expire()
 
-            while res['expires_at'] > datetime.datetime.utcnow():
-                pass
+            if user_near_expire is not None:
+                user_id, res = user_near_expire
+                
+                while res['expires_at'] > datetime.datetime.utcnow():
+                    pass
 
-            try:
-                async with aiohttp.ClientSession() as sess:
-                    async with sess.post('https://accounts.spotify.com/api/token', headers={'Authorization': 'Basic ' + base64.urlsafe_b64encode(f'{self.spotify_auth.application_id}:{self.spotify_auth.application_secret}')}, params = {'grant_type': 'refresh_token', 'refresh_token': res['refresh_token']}) as resp:
-                        js = await resp.json()
+                try:
+                    async with aiohttp.ClientSession() as sess:
+                        async with sess.post('https://accounts.spotify.com/api/token', headers={'Authorization': 'Basic ' + base64.urlsafe_b64encode(f'{self.spotify_auth.application_id}:{self.spotify_auth.application_secret}')}, params = {'grant_type': 'refresh_token', 'refresh_token': res['refresh_token']}) as resp:
+                            js = await resp.json()
 
-                        if 'expires_in' not in js and 'access_token' not in js:
-                            await self.db_two.execute("""
-                            DELETE FROM spotify_auth
-                            WHERE user_id = $1
-                            """, user_id)
-                            continue
-
-                        while True:
-                            try:
+                            if 'expires_in' not in js and 'access_token' not in js:
                                 await self.db_two.execute("""
-                                UPDATE spotify_auth
-                                SET access_token = $2,
-                                    expires_st = $3,
-                                    expires_in = $4
+                                DELETE FROM spotify_auth
                                 WHERE user_id = $1
-                                """, user_id, js['access_token'], (datetime.datetime.utcnow() + datetime.timedelta(seconds=js['expires_in'])), js['expires_in'])
-                            except InterfaceError:
-                                pass
-                            else:
-                                pass
-            except:
-                pass
+                                """, user_id)
+                                continue
+
+                            while True:
+                                try:
+                                    await self.db_two.execute("""
+                                    UPDATE spotify_auth
+                                    SET access_token = $2,
+                                        expires_st = $3,
+                                        expires_in = $4
+                                    WHERE user_id = $1
+                                    """, user_id, js['access_token'], (datetime.datetime.utcnow() + datetime.timedelta(seconds=js['expires_in'])), js['expires_in'])
+                                except InterfaceError:
+                                    pass
+                                else:
+                                    pass
+                except:
+                    pass
 
             await asyncio.sleep(10)
             continue
