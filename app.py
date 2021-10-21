@@ -88,7 +88,7 @@ class App(fastapi.FastAPI):
 
     async def cleanup(self):
         # Stopping tasks
-        self.renew_task.cancel()
+        #self.renew_task.cancel()
 
         # Cleanup
         await self.db_one.close()
@@ -98,59 +98,6 @@ class App(fastapi.FastAPI):
 
     async def on_shutdown(self):
         await self.cleanup()
-
-    async def get_user_near_expire(self) -> typing.Tuple[int, dict]:
-        while True:
-            try:
-                res = await self.db_one.fetchrow('SELECT * FROM spotify_auth ORDER BY expires_at ASC')
-            except:
-                pass
-            else:
-                if res is None:
-                    return None
-
-                return int(res['user_id']), dict(res)
-
-    async def renew(self): # Renews spotify token
-        while True:
-            user_near_expire = await self.get_user_near_expire()
-
-            if user_near_expire is not None:
-                user_id, res = user_near_expire
-
-                while res['expires_at'] > datetime.datetime.utcnow():
-                    pass
-
-                try:
-                    async with aiohttp.ClientSession() as sess:
-                        async with sess.post('https://accounts.spotify.com/api/token', headers={'Authorization': 'Basic ' + base64.urlsafe_b64encode(f'{self.spotify_auth.application_id}:{self.spotify_auth.application_secret}')}, params = {'grant_type': 'refresh_token', 'refresh_token': res['refresh_token']}) as resp:
-                            js = await resp.json()
-
-                            if 'expires_in' not in js and 'access_token' not in js:
-                                await self.db_one.execute("""
-                                DELETE FROM spotify_auth
-                                WHERE user_id = $1
-                                """, user_id)
-                                continue
-
-                            while True:
-                                try:
-                                    await self.db_one.execute("""
-                                    UPDATE spotify_auth
-                                    SET access_token = $2,
-                                        expires_st = $3,
-                                        expires_in = $4
-                                    WHERE user_id = $1
-                                    """, user_id, js['access_token'], (datetime.datetime.utcnow() + datetime.timedelta(seconds=js['expires_in'])), js['expires_in'])
-                                except InterfaceError:
-                                    pass
-                                else:
-                                    pass
-                except:
-                    pass
-
-            await asyncio.sleep(10)
-            continue
 
 app = App()
 
