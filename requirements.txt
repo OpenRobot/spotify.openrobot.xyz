@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+async-spotify
+discord-ext-oauth
+asyncpg
+aioredis
+jinja2
+aiohttp
