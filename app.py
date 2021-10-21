@@ -53,7 +53,7 @@ class App(fastapi.FastAPI):
         self.redis = None
 
         self.add_event_handler('startup', self.on_startup)
-        self.add_event_handler('shutdown', self.on_shutdown)
+        #self.add_event_handler('shutdown', self.on_shutdown)
 
         self.templates = Jinja2Templates(directory='html')
 
@@ -75,7 +75,7 @@ class App(fastapi.FastAPI):
                     refresh_token TEXT,
                     expires_at TIMESTAMP,
                     expires_in BIGINT DEFAULT 3600
-                )
+                );
                 """)
             except InterfaceError:
                 pass
@@ -84,15 +84,15 @@ class App(fastapi.FastAPI):
 
         asyncio.get_event_loop().create_task(self.renew())
 
-    async def cleanup(self):
+    #async def cleanup(self):
         # Cleanup
-        await self.db_one.close()
-        await self.db_one.close()
+        #await self.db_one.close()
+        #await self.db_one.close()
 
-        await self.redis.close()
+        #await self.redis.close()
 
-    async def on_shutdown(self):
-        await self.cleanup()
+    #async def on_shutdown(self):
+        #await self.cleanup()
 
     async def get_user_near_expire(self) -> typing.Tuple[int, dict]:
         while True:
@@ -225,5 +225,5 @@ async def error(request, exc):
     except:
         raise exc
 
-if __name__ == '__main__':
-    uvicorn.run(app, host=WebConfig.HOST, port=WebConfig.PORT)
+#if __name__ == '__main__':
+    #uvicorn.run(app, host=WebConfig.HOST, port=WebConfig.PORT)
