@@ -35,13 +35,13 @@ class App(fastapi.FastAPI):
             application_id=Spotify.ID,
             application_secret=Spotify.SECRET,
             scopes=Spotify.SCOPES,
-            redirect_url=Spotify.REDIRECT_URI
+            redirect_url='https://spotify.openrobot.xyz' + Spotify.REDIRECT_URI
         )
 
         self.discord = discord_oauth.OAuth2Client(
             client_id=Discord.ID,
             client_secret=Discord.SECRET,
-            redirect_uri=Discord.REDIRECT_URI,
+            redirect_uri='https://spotify.openrobot.xyz' + Discord.REDIRECT_URI,
             scopes=Discord.SCOPES
         )
 
@@ -158,7 +158,7 @@ async def login(request: Request):
     return app.templates.TemplateResponse('login_endpoint.html', {'request': request})
 
 @app.get(Discord.LOGIN_URI)
-async def discoed_login():
+async def discord_login():
     return redirect(Discord.OAUTH_URL)
 
 @app.get(Discord.REDIRECT_URI)
@@ -210,7 +210,20 @@ async def spotify_callback(code: str = None, state: str = None, error: str = Non
         else:
             break
 
+    async def delete():
+        await asyncio.sleep(10)
+        await app.redis.delete(str(user_id))
+
+    asyncio.get_event_loop().create_task(delete())
+
     return PlainTextResponse('Authoirzed. You may now close this tab.')
+
+@app.exception_handler(Exception)
+async def error(request, exc):
+    try:
+        print(exc.json)
+    except:
+        raise exc
 
 if __name__ == '__main__':
     uvicorn.run(app, host=WebConfig.HOST, port=WebConfig.PORT)
