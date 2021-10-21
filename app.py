@@ -84,15 +84,15 @@ class App(fastapi.FastAPI):
             else:
                 break
 
-        self.renew_task = asyncio.get_event_loop().create_task(self.renew())
+        #self.renew_task = asyncio.get_event_loop().create_task(self.renew())
 
     async def cleanup(self):
         # Stopping tasks
         self.renew_task.cancel()
-        
+
         # Cleanup
         await self.db_one.close()
-        await self.db_one.close()
+        #await self.db_one.close()
 
         await self.redis.close()
 
@@ -218,15 +218,15 @@ async def spotify_callback(code: str = None, state: str = None, error: str = Non
         else:
             break
 
-    async def delete():
-        await asyncio.sleep(10)
-        await app.redis.delete(str(user_id))
+    #async def delete():
+        #await asyncio.sleep(3600)
+        #await app.redis.delete(str(user_id))
 
-    asyncio.get_event_loop().create_task(delete())
+    #asyncio.get_event_loop().create_task(delete())
 
     return PlainTextResponse('Authoirzed. You may now close this tab.')
 
-@app.exception_handler(Exception)
+#@app.exception_handler(Exception)
 async def error(request, exc):
     try:
         print(exc.json)
