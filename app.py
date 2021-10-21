@@ -82,7 +82,7 @@ class App(fastapi.FastAPI):
             else:
                 break
 
-        await asyncio.get_event_loop().create_task(self.renew())
+        asyncio.get_event_loop().create_task(self.renew())
 
     async def cleanup(self):
         # Cleanup
@@ -103,7 +103,7 @@ class App(fastapi.FastAPI):
             else:
                 if res is None:
                     return None
-                    
+
                 return int(res['user_id']), dict(res)
 
     async def renew(self): # Renews spotify token
