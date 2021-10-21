@@ -101,6 +101,9 @@ class App(fastapi.FastAPI):
             except:
                 pass
             else:
+                if res is None:
+                    return None
+                    
                 return int(res['user_id']), dict(res)
 
     async def renew(self): # Renews spotify token
@@ -109,7 +112,7 @@ class App(fastapi.FastAPI):
 
             if user_near_expire is not None:
                 user_id, res = user_near_expire
-                
+
                 while res['expires_at'] > datetime.datetime.utcnow():
                     pass
 
