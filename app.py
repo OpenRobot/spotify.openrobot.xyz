@@ -59,7 +59,7 @@ class App(fastapi.FastAPI):
 
     async def on_startup(self):
         self.db_one = await asyncpg.create_pool(Database.One.DSN)
-        self.db_two = await asyncpg.create_pool(Database.Two.DSN)
+        #self.db_two = await asyncpg.create_pool(Database.Two.DSN)
 
         self.redis = aioredis.Redis(host=Database.Redis.HOST, port=Database.Redis.PORT, password=Database.Redis.PASSWORD, db=Database.Redis.DB)
 
@@ -67,7 +67,7 @@ class App(fastapi.FastAPI):
 
         while True:
             try:
-                await self.db_two.execute("""
+                await self.db_one.execute("""
                 CREATE TABLE IF NOT EXISTS spotify_auth(
                     user_id BIGINT,
                     code TEXT,
@@ -87,7 +87,7 @@ class App(fastapi.FastAPI):
     async def cleanup(self):
         # Cleanup
         await self.db_one.close()
-        await self.db_two.close()
+        await self.db_one.close()
 
         await self.redis.close()
 
@@ -97,7 +97,7 @@ class App(fastapi.FastAPI):
     async def get_user_near_expire(self) -> typing.Tuple[int, dict]:
         while True:
             try:
-                res = await self.db_two.fetchrow('SELECT * FROM spotify_auth ORDER BY expires_at ASC')
+                res = await self.db_one.fetchrow('SELECT * FROM spotify_auth ORDER BY expires_at ASC')
             except:
                 pass
             else:
@@ -122,7 +122,7 @@ class App(fastapi.FastAPI):
                             js = await resp.json()
 
                             if 'expires_in' not in js and 'access_token' not in js:
-                                await self.db_two.execute("""
+                                await self.db_one.execute("""
                                 DELETE FROM spotify_auth
                                 WHERE user_id = $1
                                 """, user_id)
@@ -130,7 +130,7 @@ class App(fastapi.FastAPI):
 
                             while True:
                                 try:
-                                    await self.db_two.execute("""
+                                    await self.db_one.execute("""
                                     UPDATE spotify_auth
                                     SET access_token = $2,
                                         expires_st = $3,
@@ -188,7 +188,7 @@ async def spotify_callback(code: str = None, state: str = None, error: str = Non
 
     while True:
         try:
-            is_in_db = bool(await app.db_two.fetch("SELECT * FROM spotify_auth WHERE user_id = $1", user_id))
+            is_in_db = bool(await app.db_one.fetch("SELECT * FROM spotify_auth WHERE user_id = $1", user_id))
         except InterfaceError:
             pass
         else:
@@ -197,14 +197,14 @@ async def spotify_callback(code: str = None, state: str = None, error: str = Non
     while True:
         try:
             if is_in_db:
-                await app.db_two.execute("""
+                await app.db_one.execute("""
                 DELETE FROM spotify_auth
                 WHERE user_id = $1
                 """, user_id)
 
                 is_in_db = False
             
-            await app.db_two.execute("INSERT INTO spotify_auth VALUES ($1, $2, $3, $4, $5, $6)", user_id, code, auth_token.access_token, auth_token.refresh_token, expires_at, 3000)
+            await app.db_one.execute("INSERT INTO spotify_auth VALUES ($1, $2, $3, $4, $5, $6)", user_id, code, auth_token.access_token, auth_token.refresh_token, expires_at, 3000)
         except InterfaceError:
             pass
         else:
