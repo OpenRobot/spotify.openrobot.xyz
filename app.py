@@ -57,6 +57,8 @@ class App(fastapi.FastAPI):
 
         self.templates = Jinja2Templates(directory='html')
 
+        self.renew_task = None
+
     async def on_startup(self):
         self.db_one = await asyncpg.create_pool(Database.One.DSN)
         #self.db_two = await asyncpg.create_pool(Database.Two.DSN)
@@ -82,17 +84,20 @@ class App(fastapi.FastAPI):
             else:
                 break
 
-        asyncio.get_event_loop().create_task(self.renew())
+        self.renew_task = asyncio.get_event_loop().create_task(self.renew())
 
-    #async def cleanup(self):
+    async def cleanup(self):
+        # Stopping tasks
+        self.renew_task.cancel()
+        
         # Cleanup
-        #await self.db_one.close()
-        #await self.db_one.close()
+        await self.db_one.close()
+        await self.db_one.close()
 
-        #await self.redis.close()
+        await self.redis.close()
 
-    #async def on_shutdown(self):
-        #await self.cleanup()
+    async def on_shutdown(self):
+        await self.cleanup()
 
     async def get_user_near_expire(self) -> typing.Tuple[int, dict]:
         while True:
@@ -165,7 +170,7 @@ async def discord_login():
 async def discord_callback(code: str = None, error: str = None, error_description: str = None):
     if error:
         return PlainTextResponse(f'Error: {error}\n\n{error_description}', status_code=400)
-        
+
     resp = await app.discord.exchange_code(code)
     user = await app.discord.fetch_user(resp)
 
