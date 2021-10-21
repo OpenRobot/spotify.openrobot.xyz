@@ -225,5 +225,5 @@ async def error(request, exc):
     except:
         raise exc
 
-#if __name__ == '__main__':
-    #uvicorn.run(app, host=WebConfig.HOST, port=WebConfig.PORT)
+if __name__ == '__main__':
+    uvicorn.run(app, host=WebConfig.HOST, port=WebConfig.PORT, loop='auto')
