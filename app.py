@@ -162,7 +162,10 @@ async def discord_login():
     return redirect(Discord.OAUTH_URL)
 
 @app.get(Discord.REDIRECT_URI)
-async def discord_callback(code: str):
+async def discord_callback(code: str = None, error: str = None, error_description: str = None):
+    if error:
+        return PlainTextResponse(f'Error: {error}\n\n{error_description}', status_code=400)
+        
     resp = await app.discord.exchange_code(code)
     user = await app.discord.fetch_user(resp)
 
